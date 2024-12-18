@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoL Randomizer</title>
+    <style>
+        /* Reset some styles for consistency */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1e1e1e;
+            color: white;
+            text-align: center;
+            padding: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: #00ff99;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #00ff99;
+            color: #1e1e1e;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #00cc80;
+        }
+
+        .result-container {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #333;
+            border-radius: 10px;
+            border: 2px solid #00ff99;
+            box-shadow: 0 4px 6px rgba(0, 255, 153, 0.2);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            width: 80%;
+            margin: 0 auto;
+        }
+
+        .result-container h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #00ff99;
+        }
+
+        .result-container img {
+            max-width: 300px;
+            margin-top: 10px;
+            border-radius: 10px;
+            border: 2px solid #1e1e1e;
+        }
+
+        .spell-container {
+            position: relative;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .spell-key {
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .result-container p {
+            font-size: 1.2rem;
+            margin-top: 10px;
+        }
+
+        .loading {
+            font-size: 1.5rem;
+            color: #ffcc00;
+            font-weight: bold;
+        }
+
+        /* Add animation effect to result */
+        .result-container.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .result-container.hide {
+            transform: translateY(30px);
+            opacity: 0;
+        }
+
+        /* Styling for items */
+        .items-container {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 columns */
+            grid-template-rows: repeat(2, 1fr); /* 2 rows */
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .item {
+            background-color: #333;
+            padding: 10px;
+            border-radius: 8px;
+            color: #fff;
+            text-align: center;
+            border: 2px solid #00ff99;
+        }
+
+        .item img {
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .item h4 {
+            color: #00cc80;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>League of Legends Randomizer</h1>
+    <button id="randomizeChampionButton">Randomize Champion</button>
+
+    <div class="result-container hide" id="resultContainer">
+        <!-- All randomized champion, skill, and items will appear here -->
+    </div>
+
+    <div class="loading" id="loading" style="display: none;">
+        Loading...
+    </div>
+
+    <script>
+    document.getElementById('randomizeChampionButton').addEventListener('click', async () => {
+    const resultContainer = document.getElementById('resultContainer');
+    const loadingDiv = document.getElementById('loading');
+
+    // Show loading state
+    loadingDiv.style.display = 'block';
+    resultContainer.classList.remove('show');
+    resultContainer.classList.add('hide');
+
+    try {
+        // Fetch champion data
+        const championResponse = await fetch('/random_champion');
+        if (!championResponse.ok) {
+            throw new Error("Failed to fetch champion");
+        }
+        const championData = await championResponse.json();
+
+        // Fetch random items
+        const itemsResponse = await fetch('/random_items');
+        if (!itemsResponse.ok) {
+            throw new Error("Failed to fetch items");
+        }
+        const itemsData = await itemsResponse.json();
+
+        // Separate boots item and other items
+        const bootsItem = itemsData.find(item => item.tags.includes('Boots'));
+        const otherItems = itemsData.filter(item => !item.tags.includes('Boots'));
+
+        // If a boots item exists, add it as the first item in the list
+        if (bootsItem) {
+            otherItems.unshift(bootsItem);  // Add boots as the first item
+        }
+
+        // Display the result (champion, spell, and items all in one container)
+        resultContainer.innerHTML = `
+            <h2>${championData.champion}</h2>
+            <img src="https://ddragon.leagueoflegends.com/cdn/12.23.1/img/champion/${championData.sprite}" alt="${championData.champion}">
+            <h3>Random Spell:</h3>
+            <div class="spell-container">
+                <img src="https://ddragon.leagueoflegends.com/cdn/12.23.1/img/spell/${championData.spell.image_name}" alt="${championData.spell.spell_name}">
+                <div class="spell-key">${championData.spell.key_binding}</div>
+            </div>
+            <h3>Random Items:</h3>
+            <div class="items-container">
+                ${otherItems.map(item => `
+                    <div class="item">
+                        <img src="https://ddragon.leagueoflegends.com/cdn/12.23.1/img/item/${item.image}" alt="${item.name}">
+                        <h4>${item.name}</h4>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        // Hide loading and show result with animation
+        loadingDiv.style.display = 'none';
+        resultContainer.classList.remove('hide');
+        resultContainer.classList.add('show');
+    } catch (error) {
+        loadingDiv.style.display = 'none';
+        resultContainer.innerHTML = `<p>Error: ${error.message}</p>`;
+        resultContainer.classList.remove('hide');
+        resultContainer.classList.add('show');
+    }
+});
+
+    </script>
+</body>
+</html>
